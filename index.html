@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Resume Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3d;
+    --accent: #7c6aff;
+    --accent2: #ff6a8a;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --success: #4ade80;
+    --warn: #fbbf24;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* animated grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #app { position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,.85);
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: rgba(124,106,255,.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,106,255,.3);
+    padding: 4px 10px;
+    border-radius: 100px;
+    letter-spacing: .05em;
+  }
+
+  /* ── AUTH OVERLAY ── */
+  #auth-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 73px);
+    padding: 40px;
+    text-align: center;
+    gap: 32px;
+  }
+
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: .2em;
+    text-transform: uppercase;
+  }
+
+  .hero-title {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    max-width: 700px;
+  }
+
+  .hero-title em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 480px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all .2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #6a57f5; transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,106,255,.4); }
+
+  .btn-google {
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 16px;
+    padding: 16px 36px;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.3);
+  }
+  .btn-google:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+  .btn-success {
+    background: rgba(74,222,128,.15);
+    color: var(--success);
+    border: 1px solid rgba(74,222,128,.3);
+  }
+  .btn-success:hover { background: rgba(74,222,128,.25); transform: translateY(-2px); }
+
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+  /* ── MAIN LAYOUT ── */
+  #main-app { display: none; padding: 32px 40px; }
+
+  /* steps bar */
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 6px;
+    width: fit-content;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all .3s;
+    cursor: default;
+  }
+  .step.active { background: var(--accent); color: #fff; }
+  .step.done { color: var(--success); }
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .step.active .step-num { background: rgba(255,255,255,.25); }
+  .step-arrow { color: var(--border); padding: 0 4px; font-size: 18px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: rgba(124,106,255,.3); }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  .grid-1 { margin-bottom: 24px; }
+
+  /* ── INPUTS ── */
+  .input-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .input-wrap label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+  input[type="text"], textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 16px;
+    transition: border-color .2s, box-shadow .2s;
+    resize: vertical;
+    width: 100%;
+  }
+  input[type="text"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,106,255,.15);
+  }
+  textarea { min-height: 130px; }
+
+  /* ── STATUS CHIPS ── */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 12px;
+    border-radius: 100px;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-ok { background: rgba(74,222,128,.12); color: var(--success); }
+  .status-ok .status-dot { background: var(--success); }
+  .status-warn { background: rgba(251,191,36,.12); color: var(--warn); }
+  .status-warn .status-dot { background: var(--warn); animation: pulse 1.5s infinite; }
+  .status-err { background: rgba(255,106,138,.12); color: var(--accent2); }
+  .status-err .status-dot { background: var(--accent2); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── AI OUTPUT ── */
+  #output-section { display: none; margin-top: 24px; }
+
+  .output-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+  .output-box::-webkit-scrollbar { width: 6px; }
+  .output-box::-webkit-scrollbar-track { background: transparent; }
+  .output-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width .4s ease;
+  }
+
+  /* ── LOG ── */
+  .log {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-line { display: flex; gap: 10px; align-items: flex-start; }
+  .log-time { color: var(--accent); opacity: .6; flex-shrink: 0; }
+  .log-msg { color: var(--text); }
+  .log-ok { color: var(--success); }
+  .log-err { color: var(--accent2); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 28px 0;
+  }
+
+  /* ── SETUP NOTE ── */
+  .setup-note {
+    background: rgba(124,106,255,.07);
+    border: 1px solid rgba(124,106,255,.2);
+    border-radius: 14px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+  .setup-note h3 { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+  .setup-note ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  .setup-note li { font-size: 13px; color: var(--muted); line-height: 1.6; font-family: 'DM Mono', monospace; }
+  .setup-note li strong { color: var(--text); }
+  .setup-note a { color: var(--accent); }
+
+  .inline-code {
+    font-family: 'DM Mono', monospace;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--accent2);
+  }
+
+  /* ── CONFIG SECTION ── */
+  #config-section { margin-bottom: 32px; }
+
+  .row-btns { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* ── DOC PREVIEW PILL ── */
+  .doc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 350px;
+  }
+  .doc-pill svg { flex-shrink: 0; }
+  .doc-pill-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; }
+    #main-app { padding: 20px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .hero-title { letter-spacing: -1px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">resume<span>.</span>ai</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div id="user-chip" style="display:none" class="badge">— not signed in —</div>
+    <div class="badge">Powered by Gemini</div>
+  </div>
+</header>
+
+<!-- ── AUTH SCREEN ── -->
+<div id="auth-screen">
+  <div class="hero-label">✦ AI-Powered Career Tool</div>
+  <h1 class="hero-title">Rewrite your resume<br/>with <em>AI precision</em></h1>
+  <p class="hero-sub">Connect your Google account. Point to your existing resume doc. Paste a job description. Let Gemini tailor a perfect resume and write it back to Google Docs.</p>
+
+  <div class="setup-note" style="text-align:left;max-width:560px">
+    <h3>⚙️ Before you begin — One-time setup</h3>
+    <ol>
+      <li>Get a <strong>free Gemini API key</strong>: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></li>
+      <li>Create a <strong>Google Cloud project</strong> and enable the <strong>Google Docs API</strong></li>
+      <li>Create an <strong>OAuth 2.0 Client ID</strong> (Web App) — add <span class="inline-code">this page URL</span> as an Authorized JavaScript Origin</li>
+      <li>Paste your <strong>Client ID</strong> and <strong>Gemini API Key</strong> in the fields below</li>
+    </ol>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;width:100%;max-width:460px">
+    <div class="input-wrap">
+      <label>Google OAuth Client ID</label>
+      <input type="text" id="client-id-input" placeholder="xxx.apps.googleusercontent.com"/>
+    </div>
+    <div class="input-wrap">
+      <label>Gemini API Key (free — from AI Studio)</label>
+      <input type="text" id="gemini-key-input" placeholder="AIza..."/>
+    </div>
+  </div>
+
+  <button class="btn btn-google" onclick="handleSignIn()">
+    <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Sign in with Google
+  </button>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="main-app">
+
+  <!-- steps -->
+  <div class="steps">
+    <div class="step active" id="step1"><div class="step-num">1</div>Connect Docs</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step2"><div class="step-num">2</div>Add Job Description</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step3"><div class="step-num">3</div>Generate</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="step4"><div class="step-num">4</div>Done ✓</div>
+  </div>
+
+  <!-- Step 1: config -->
+  <div id="config-section">
+    <div class="grid-2">
+
+      <div class="card">
+        <div class="card-label">Source</div>
+        <div class="card-title">
+          📄 Existing Resume Doc
+          <div id="read-status" class="status status-warn"><div class="status-dot"></div>not connected</div>
+        </div>
+        <div class="input-wrap" style="margin-bottom:14px">
+          <label>Google Docs ID</label>
+          <input type="text" id="source-doc-id" placeholder="Paste Document ID from the URL"/>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="readSourceDoc()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Read Resume
+          </button>
+          <div id="source-doc-pill" style="display:none" class="doc-pill">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            <span class="doc-pill-name" id="source-doc-name">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Output</div>
+        <div class="card-title">
+          ✍️ New Resume Doc
+          <div id="write-status" class="status status-warn"><div class="status-dot"></div>not created</div>
+        </div>
+        <div class="input-wrap" style="margin-bottom:14px">
+          <label>New Doc Name</label>
+          <input type="text" id="output-doc-name" placeholder="e.g. Tailored Resume — Google SWE" value="AI Tailored Resume"/>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="createOutputDoc()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Create New Doc
+          </button>
+          <div id="output-doc-pill" style="display:none" class="doc-pill">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            <span class="doc-pill-name" id="output-doc-name-pill">—</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Step 2: Job desc -->
+    <div class="card grid-1">
+      <div class="card-label">Job Target</div>
+      <div class="card-title">📋 Job Description</div>
+      <div class="input-wrap">
+        <label>Paste the full job description here</label>
+        <textarea id="job-desc" placeholder="Paste the job description — role, requirements, skills, company info...&#10;&#10;The more detail you add, the better the AI can tailor your resume."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 3: Generate -->
+    <div class="card" id="generate-card">
+      <div class="card-label">Step 3</div>
+      <div class="card-title">🤖 Generate Tailored Resume</div>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.7">
+        Gemini AI will read your resume, analyze the job description, and rewrite a perfectly tailored resume — then push it directly to your new Google Doc.
+      </p>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="generate-btn" onclick="generateResume()">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Generate & Write to Docs
+        </button>
+        <span id="gen-status" style="font-size:13px;color:var(--muted);font-family:'DM Mono',monospace"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div id="output-section">
+    <div class="card">
+      <div class="card-label">Result</div>
+      <div class="card-title" style="justify-content:space-between">
+        <span>✅ Tailored Resume Preview</span>
+        <a id="open-doc-link" href="#" target="_blank" class="btn btn-success" style="font-size:13px;padding:8px 18px">
+          Open in Google Docs →
+        </a>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="log" id="log-box" style="margin:12px 0 16px"></div>
+      <div class="output-box" id="output-preview">Waiting for generation...</div>
+    </div>
+  </div>
+
+</div><!-- /main-app -->
+</div><!-- /app -->
+
+<script>
+// ────────────────────────────────────────────────
+// CONFIG — filled from user input
+// ────────────────────────────────────────────────
+let GOOGLE_CLIENT_ID = '';
+let GEMINI_API_KEY = '';
+const SCOPES = 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file';
+
+let tokenClient = null;
+let accessToken = null;
+let sourceDocId = null;
+let outputDocId = null;
+let resumeText = '';
+
+// ────────────────────────────────────────────────
+// LOG HELPER
+// ────────────────────────────────────────────────
+function log(msg, type = '') {
+  const box = document.getElementById('log-box');
+  const now = new Date().toLocaleTimeString('en',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el = document.createElement('div');
+  el.className = 'log-line';
+  el.innerHTML = `<span class="log-time">[${now}]</span><span class="log-msg ${type ? 'log-'+type : ''}">${msg}</span>`;
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+// ────────────────────────────────────────────────
+// GOOGLE SIGN-IN
+// ────────────────────────────────────────────────
+function handleSignIn() {
+  GOOGLE_CLIENT_ID = document.getElementById('client-id-input').value.trim();
+  GEMINI_API_KEY = document.getElementById('gemini-key-input').value.trim();
+
+  if (!GOOGLE_CLIENT_ID) { alert('Please enter your Google OAuth Client ID.'); return; }
+  if (!GEMINI_API_KEY) { alert('Please enter your Gemini API key.'); return; }
+
+  // Load the GIS library dynamically
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = () => {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: SCOPES,
+      callback: (resp) => {
+        if (resp.error) { alert('Auth error: ' + resp.error); return; }
+        accessToken = resp.access_token;
+        onSignedIn();
+      }
+    });
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  };
+  script.onerror = () => alert('Failed to load Google auth library. Check your network.');
+  document.head.appendChild(script);
+}
+
+function onSignedIn() {
+  // Fetch user info
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  }).then(r => r.json()).then(u => {
+    document.getElementById('user-chip').textContent = '✓ ' + (u.email || 'signed in');
+    document.getElementById('user-chip').style.display = 'inline-flex';
+  });
+
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+}
+
+// ────────────────────────────────────────────────
+// READ SOURCE DOC
+// ────────────────────────────────────────────────
+async function readSourceDoc() {
+  const id = document.getElementById('source-doc-id').value.trim();
+  if (!id) { alert('Paste a Google Docs document ID first.'); return; }
+  if (!accessToken) { alert('Please sign in first.'); return; }
+
+  try {
+    const r = await fetch(`https://docs.googleapis.com/v1/documents/${id}`, {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status} — check the doc ID and sharing permissions.`);
+    const doc = await r.json();
+    resumeText = extractText(doc);
+    sourceDocId = id;
+
+    document.getElementById('source-doc-name').textContent = doc.title;
+    document.getElementById('source-doc-pill').style.display = 'inline-flex';
+    document.getElementById('read-status').innerHTML = `<div class="status-dot"></div>${resumeText.split(' ').length} words read`;
+    document.getElementById('read-status').className = 'status status-ok';
+    setStep(2);
+  } catch(e) {
+    document.getElementById('read-status').innerHTML = '<div class="status-dot"></div>error';
+    document.getElementById('read-status').className = 'status status-err';
+    alert('Could not read doc: ' + e.message);
+  }
+}
+
+function extractText(doc) {
+  let text = '';
+  const content = doc.body?.content || [];
+  for (const block of content) {
+    if (block.paragraph) {
+      for (const el of block.paragraph.elements || []) {
+        if (el.textRun) text += el.textRun.content;
+      }
+    }
+    if (block.table) {
+      for (const row of block.table.tableRows || []) {
+        for (const cell of row.tableCells || []) {
+          for (const cb of cell.content || []) {
+            if (cb.paragraph) {
+              for (const el of cb.paragraph.elements || []) {
+                if (el.textRun) text += el.textRun.content + ' ';
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return text.trim();
+}
+
+// ────────────────────────────────────────────────
+// CREATE OUTPUT DOC
+// ────────────────────────────────────────────────
+async function createOutputDoc() {
+  if (!accessToken) { alert('Please sign in first.'); return; }
+  const name = document.getElementById('output-doc-name').value.trim() || 'AI Tailored Resume';
+
+  try {
+    const r = await fetch('https://docs.googleapis.com/v1/documents', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: name })
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const doc = await r.json();
+    outputDocId = doc.documentId;
+
+    document.getElementById('output-doc-name-pill').textContent = doc.title;
+    document.getElementById('output-doc-pill').style.display = 'inline-flex';
+    document.getElementById('write-status').innerHTML = '<div class="status-dot"></div>created ✓';
+    document.getElementById('write-status').className = 'status status-ok';
+    document.getElementById('open-doc-link').href = `https://docs.google.com/document/d/${outputDocId}/edit`;
+  } catch(e) {
+    alert('Could not create doc: ' + e.message);
+  }
+}
+
+// ────────────────────────────────────────────────
+// GENERATE WITH GEMINI
+// ────────────────────────────────────────────────
+async function generateResume() {
+  if (!resumeText) { alert('Please read your source resume first (Step 1).'); return; }
+  if (!outputDocId) { alert('Please create an output doc first.'); return; }
+  const jobDesc = document.getElementById('job-desc').value.trim();
+  if (!jobDesc) { alert('Please paste a job description.'); return; }
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Generating...';
+
+  document.getElementById('output-section').style.display = 'block';
+  document.getElementById('output-preview').textContent = '';
+  setProgress(10);
+
+  log('Reading resume content...', '');
+  log(`Resume: ${resumeText.split(' ').length} words detected`, 'ok');
+  setProgress(20);
+
+  const prompt = `You are a professional resume writer and career coach.
+
+TASK: Rewrite the candidate's resume to be perfectly tailored for the job description below. 
+
+RULES:
+- Keep all factual information accurate (do not invent experiences or skills)
+- Reorder and reword bullet points to match job requirements
+- Use keywords from the job description naturally
+- Highlight the most relevant experiences prominently
+- Write in a professional, concise tone
+- Format the output in clean plain text with clear sections:
+  NAME & CONTACT
+  PROFESSIONAL SUMMARY
+  SKILLS
+  EXPERIENCE
+  EDUCATION
+  (any other relevant sections)
+- Each section header should be in ALL CAPS followed by a line of dashes
+- Use • for bullet points
+
+CANDIDATE'S CURRENT RESUME:
+---
+${resumeText}
+---
+
+JOB DESCRIPTION:
+---
+${jobDesc}
+---
+
+Write the complete tailored resume now:`;
+
+  try {
+    log('Sending to Gemini 1.5 Flash...', '');
+    setProgress(40);
+
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+        })
+      }
+    );
+
+    if (!r.ok) {
+      const err = await r.json();
+      throw new Error(err.error?.message || `HTTP ${r.status}`);
+    }
+
+    const data = await r.json();
+    const aiResume = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!aiResume) throw new Error('Gemini returned an empty response.');
+
+    log('Resume generated successfully ✓', 'ok');
+    setProgress(65);
+    document.getElementById('output-preview').textContent = aiResume;
+
+    // Write to Google Docs
+    log('Writing to Google Docs...', '');
+    await writeToDoc(outputDocId, aiResume);
+    setProgress(100);
+    log(`Written to Google Doc ✓ (ID: ${outputDocId})`, 'ok');
+
+    document.getElementById('gen-status').textContent = '✓ Done!';
+    setStep(4);
+
+    document.getElementById('open-doc-link').style.display = 'inline-flex';
+
+  } catch(e) {
+    log('Error: ' + e.message, 'err');
+    setProgress(0);
+    document.getElementById('gen-status').textContent = '✗ Failed';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Regenerate';
+  }
+}
+
+// ────────────────────────────────────────────────
+// WRITE TO GOOGLE DOCS
+// ────────────────────────────────────────────────
+async function writeToDoc(docId, text) {
+  // Clear existing content first
+  const docR = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  const doc = await docR.json();
+  const endIndex = doc.body?.content?.slice(-1)[0]?.endIndex || 1;
+
+  const requests = [];
+
+  if (endIndex > 2) {
+    requests.push({
+      deleteContentRange: {
+        range: { startIndex: 1, endIndex: endIndex - 1 }
+      }
+    });
+  }
+
+  requests.push({
+    insertText: { location: { index: 1 }, text }
+  });
+
+  const r = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests })
+  });
+
+  if (!r.ok) {
+    const err = await r.json();
+    throw new Error('Docs write error: ' + (err.error?.message || r.status));
+  }
+}
+
+// ────────────────────────────────────────────────
+// STEP INDICATOR
+// ────────────────────────────────────────────────
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+</script>
+</body>
+</html>
