@@ -772,11 +772,11 @@ ${jobDesc}
 Write the complete tailored resume now:`;
 
   try {
-    log('Sending to Gemini 1.5 Flash...', '');
+    log('Sending to Gemini 2.5 Flash...', '');
     setProgress(40);
 
     const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
